@@ -1,0 +1,20 @@
+[project]
+name = "utils"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Henry Williams", email = "henrywilliams95000@gmail.com" }
+]
+requires-python = ">=3.10"
+dependencies = [
+    "pandas>=2.2.3",
+    "torch>=2.5.1",
+]
+
+[project.scripts]
+utils = "utils:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

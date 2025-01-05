@@ -177,14 +177,14 @@ class RIM(nn.Module):
         st = None
         X = torch.zeros(
             (
-                self.sequence_size + 1,
                 x0.size(0),
+                self.sequence_size + 1,
                 self.input_size,
                 x0.size(2),
                 x0.size(3),
             )
         )
-        X[0] = y.clone()
+        X[:, 0] = y.clone()
         for t in range(self.sequence_size):
             dxt, st = self.rnn(input_t, st)
 
@@ -193,6 +193,6 @@ class RIM(nn.Module):
             grad_xt = self.gradient_fun(xt, y).clone()
             input_t = Variable(torch.cat((xt, grad_xt), 1))
 
-            X[t + 1] = xt.clone()
+            X[:, t + 1] = xt.clone()
 
         return X.to(self.device)

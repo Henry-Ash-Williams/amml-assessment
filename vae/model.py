@@ -1,165 +1,138 @@
-from typing import Tuple
-
 import torch
-from torch import Tensor, nn
-from torch.nn import functional as F
-
-
-class Encoder(nn.Module):
-    def __init__(self, input_channels: int):
-        super(Encoder, self).__init__()
-
-        self.conv1 = nn.Sequential(
-            nn.Conv2d(
-                input_channels, 32, kernel_size=4, stride=2, padding=1
-            ),  # (1, 36, 36) => (32, 18, 18)
-            nn.BatchNorm2d(32),
-            nn.ReLU(),
-        )
-
-        self.conv2 = nn.Sequential(
-            nn.Conv2d(
-                32, 64, kernel_size=4, stride=2, padding=1
-            ),  # (32, 18, 18) => (64, 9, 9)
-            nn.BatchNorm2d(64),
-            nn.ReLU(),
-        )
-
-        self.conv3 = nn.Sequential(
-            nn.Conv2d(
-                64, 128, kernel_size=4, stride=2, padding=1
-            ),  # (64, 9, 9) => (128, 4, 4)
-            nn.BatchNorm2d(128),
-            nn.ReLU(),
-        )
-
-    def forward(self, x: Tensor):
-        x = self.conv1(x)
-        x = self.conv2(x)
-        x = self.conv3(x)
-        return x
+import torch.nn as nn
+import torch.nn.functional as F
 
 
 class Decoder(nn.Module):
-    def __init__(self, input_channels: int):
+    def __init__(self):
         super(Decoder, self).__init__()
 
-        self.conv1 = nn.Sequential(
+        self.layer1 = nn.Sequential(
             nn.ConvTranspose2d(
-                128, 64, kernel_size=4, stride=2, padding=1, output_padding=1
-            ),  # (128, 4, 4)=> (64, 9, 9)
+                in_channels=128,
+                out_channels=64,
+                kernel_size=3,
+                stride=2,
+                padding=1,
+                output_padding=0,
+            ),
             nn.BatchNorm2d(64),
             nn.ReLU(),
         )
 
-        self.conv2 = nn.Sequential(
+        self.layer2 = nn.Sequential(
             nn.ConvTranspose2d(
-                64, 32, kernel_size=4, stride=2, padding=1
-            ),  # (64, 9, 9) => (32, 18, 18)
+                in_channels=64,
+                out_channels=32,
+                kernel_size=3,
+                stride=2,
+                padding=1,
+                output_padding=1,
+            ),
             nn.BatchNorm2d(32),
             nn.ReLU(),
         )
 
-        self.conv3 = nn.Sequential(
+        self.layer3 = nn.Sequential(
             nn.ConvTranspose2d(
-                32, input_channels, kernel_size=4, stride=2, padding=1
-            ),  # (1, 36, 36)
-            nn.BatchNorm2d(1),
-            nn.Sigmoid(),
+                in_channels=32,
+                out_channels=16,
+                kernel_size=3,
+                stride=2,
+                padding=1,
+                output_padding=1,
+            ),
+            nn.BatchNorm2d(16),
+            nn.ReLU(),
         )
 
-    def forward(self, x: Tensor):
-        x = self.conv1(x)
-        x = self.conv2(x)
-        x = self.conv3(x)
-        return x
+    def forward(self, z):
+        z = self.layer1(z)
+        z = self.layer2(z)
+        z = self.layer3(z)
+        return z
 
 
 class VAE(nn.Module):
-    """
-    A Convolutional Variational Autoencoder (VAE) model.
-
-    Args:
-        input_channels (int): Number of channels in the input image (e.g., 1 for grayscale, 3 for RGB).
-        latent_dim (int): Size of the latent space.
-    """
-
-    def __init__(self, input_channels: int, latent_dim: int):
+    def __init__(self, latent_dim: int = 16, hidden_dims: list[int] = None):
         super(VAE, self).__init__()
+
+        # Default hidden dimensions
+        if hidden_dims is None:
+            hidden_dims = [32, 64, 128]
 
         self.latent_dim = latent_dim
 
-        self.encoder = Encoder(input_channels)
+        modules = []
+        in_channels = 1
+        for h_dim in hidden_dims:
+            modules.append(
+                nn.Sequential(
+                    nn.Conv2d(in_channels, h_dim, kernel_size=3, stride=2, padding=1),
+                    nn.BatchNorm2d(h_dim),
+                    nn.ReLU(),
+                )
+            )
+            in_channels = h_dim
 
-        self.feature_dim = 128 * (4 * 4)
+        self.encoder = nn.Sequential(*modules)
+        self.fc_mu = nn.Linear(hidden_dims[-1] * 5 * 5, latent_dim)
+        self.fc_var = nn.Linear(hidden_dims[-1] * 5 * 5, latent_dim)
 
-        self.fc_mu = nn.Linear(self.feature_dim, latent_dim)
-        self.fc_logvar = nn.Linear(self.feature_dim, latent_dim)
-        self.fc_decode = nn.Linear(latent_dim, self.feature_dim)
+        # Decoder
+        self.decoder_input = nn.Linear(latent_dim, hidden_dims[-1] * 5 * 5)
 
-        self.decoder = Decoder(input_channels)
+        self.decoder = Decoder()
+        self.final_layer = nn.Sequential(
+            nn.Conv2d(16, 1, kernel_size=1),
+            nn.Sigmoid(),
+        )
+
+    def encode(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        x = self.encoder(x)
+        x = torch.flatten(x, start_dim=1)
+        mu = self.fc_mu(x)
+        log_var = self.fc_var(x)
+        return mu, log_var
 
     @staticmethod
-    def reparameterize(mu: Tensor, logvar: Tensor) -> Tensor:
-        """
-        Samples a latent vector z using the reparameterization trick.
-        """
-        std = torch.exp(0.5 * logvar)
+    def reparameterize(mu: torch.Tensor, log_var: torch.Tensor) -> torch.Tensor:
+        std = torch.exp(0.5 * log_var)
         eps = torch.randn_like(std)
         return mu + eps * std
 
+    def decode(self, z: torch.Tensor) -> torch.Tensor:
+        x = self.decoder_input(z)
+        x = x.view(-1, 128, 5, 5)  # Reshape for deconvolution
+        x = self.decoder(x)
+        return self.final_layer(x)
+
+    def forward(
+        self, x: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        mu, log_var = self.encode(x)
+        z = self.reparameterize(mu, log_var)
+        recon_x = self.decode(z)
+        return recon_x, mu, log_var
+
     @staticmethod
-    def loss_function(
-        reconstruction: Tensor,
-        input: Tensor,
-        mu: Tensor,
-        logvar: Tensor,
-        kld_weight=0.001,
-    ):
-        recons_loss = F.mse_loss(input=reconstruction, target=input)
-        kld_loss = torch.mean(
-            -0.5 * torch.sum(1 + logvar - mu**2 - logvar.exp(), dim=1), dim=0
-        )
-        loss = recons_loss + kld_weight * kld_loss
-
-        return {
-            "loss": loss,
-            "reconstruction_loss": recons_loss.detach(),
-            "kld_loss": -kld_loss.detach(),
-        }
-
-    def encode(self, x: Tensor) -> Tuple[Tensor, Tensor]:
-        """
-        Encodes the input into latent space parameters (mu and logvar).
-        """
-        batch_size = x.size(0)
-        x = self.encoder(x)
-        x = x.view(batch_size, -1)  # Flatten feature maps
-        mu = self.fc_mu(x)
-        logvar = self.fc_logvar(x)
-        return mu, logvar
-
-    def decode(self, z: Tensor) -> Tensor:
-        """
-        Decodes a latent vector z into reconstructed input.
-        """
-        batch_size = z.size(0)
-        z = self.fc_decode(z)
-        z = z.view(batch_size, 128, 4, 4)
-        return self.decoder(z)
-
-    def forward(self, x: Tensor) -> Tuple[Tensor, Tensor, Tensor]:
-        """
-        Runs the VAE forward pass: encodes, reparameterizes, and decodes.
-        """
-        mu, logvar = self.encode(x)
-        z = self.reparameterize(mu, logvar)
-        recon = self.decode(z)
-        return recon, mu, logvar
+    def loss_fn(
+        recon_x: torch.Tensor,
+        x: torch.Tensor,
+        mu: torch.Tensor,
+        log_var: torch.Tensor,
+        kld_weight,
+    ) -> torch.Tensor:
+        recon_loss = F.mse_loss(recon_x, x, reduction="sum")
+        kl_div = -0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
+        return recon_loss + (kld_weight * kl_div)
 
 
+# Example usage
 if __name__ == "__main__":
-    test = torch.randn((1, 1, 36, 36))
-    net = VAE(1, 100)
-    reconstruction, mu, logvar = net(test)
-    print(reconstruction.shape, mu.shape, logvar.shape)
+    vae = VAE(latent_dim=16)
+    sample_input = torch.randn(8, 1, 36, 36)  # Batch of 8 grayscale images
+    recon_output, mu, log_var = vae(sample_input)
+    print(f"Reconstruction Shape: {recon_output.shape}")
+    loss = vae.loss_fn(recon_output, sample_input, mu, log_var)
+    print(f"Reconstruction Loss: {loss.item()}")

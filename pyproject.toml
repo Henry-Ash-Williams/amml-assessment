@@ -1,11 +1,12 @@
 [project]
-name = "assessment-2"
+name = "assessment"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "ipykernel>=6.29.5",
+    "ipywidgets>=8.1.5",
     "matplotlib>=3.9.3",
     "numpy>=2.1.3",
     "opencv-python>=4.10.0.84",
@@ -18,6 +19,7 @@ dependencies = [
     "torchvision>=0.20.1",
     "treescope>=0.1.6",
     "utils",
+    "wandb>=0.19.1",
 ]
 
 [tool.uv.workspace]

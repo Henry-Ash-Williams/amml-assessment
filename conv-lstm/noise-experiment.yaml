@@ -1,0 +1,40 @@
+program: noise-experiment.py 
+name: hyperparam-sweep
+project: ConvLSTM-Experiment
+method: random
+metric:
+  name: test_loss.n6
+  goal: minimize
+parameters: 
+  batch-size: 
+    distribution: int_uniform
+    min: 32 
+    max: 256 
+  lr: 
+    min: 0.000001
+    max: 0.1
+  layers: 
+    distribution: int_uniform 
+    min: 1
+    max: 7 
+  kernels: 
+    distribution: int_uniform
+    min: 1 
+    max: 100
+  activation: 
+    values: ["relu", "tanh"]
+  optimizer:
+    values: ["Adadelta", "Adafactor", "Adagrad", "Adam", "AdamW","Adamax", "ASGD","NAdam", "RAdam", "RMSprop", "Rprop", "SGD"]
+  denoise: 
+    values: [true, false]
+  exclude-outliers: 
+    values: [true, false]
+  dataset-path:
+    value: "/Users/henrywilliams/Documents/uni/amml/assessment/conv-lstm/data"
+command: 
+  - ${env}
+  - "/Users/henrywilliams/Documents/uni/amml/assessment/.venv/bin/python"
+  - ${program}
+  - ${args}
+  
+  

@@ -4,9 +4,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-DEFAULT_THRESHOLD = 0.1
-DEFAULT_WEIGHT = 0.25
-
 
 class ConvLSTMCell(nn.Module):
     def __init__(
@@ -173,20 +170,9 @@ class ImagePredictor(nn.Module):
             padding=padding,
         )
 
-    def forward(
-        self,
-        x,
-        threshold: Optional[float] = DEFAULT_THRESHOLD,
-        weight: Optional[float] = DEFAULT_WEIGHT,
-    ):
+    def forward(self, x):
         output = self.layers(x)
         output = F.sigmoid(self.conv(output[:, :, -1]))
-
-        if threshold is not None and weight is not None:
-            noise = torch.rand_like(output)
-            mask = output > threshold
-            noise = noise * mask
-            output = output + weight * noise
 
         return output
 

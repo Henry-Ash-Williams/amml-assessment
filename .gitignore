@@ -8,8 +8,20 @@ wheels/
 
 # Virtual environments
 .venv
-**/*.pt
+# **/*.pt
 
 **/wandb/*
 
 **/*.pyc
+
+/conv-lstm/models/
+
+/writeup/*-blx.bib
+/writeup/*.aux
+/writeup/*.bbl
+/writeup/*.blg
+/writeup/*.log
+/writeup/*.log
+/writeup/*.out
+/writeup/*.synctex.gz
+/writeup/*.run.xml

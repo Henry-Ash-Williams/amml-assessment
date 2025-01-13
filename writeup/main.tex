@@ -30,7 +30,7 @@
 
 \section{Introduction}
 
-In this report, we outline and evaluate our implementation of a Convolutional Long-Term-Short-Term Memory (LSTM) model for image sequence modelling. We develop a model which learns both \emph{extrapolation} and \emph{interpolation} of images within a dataset based on MNIST with autoregressive transformations applied at each time step. We also perform a rigorous evaluation of our model, with both quantitative and qualitative analysis, and analyse its robustness to both noise and missing data\footnote{The code for our models, training, generation of graphs, and results can be found at the following GitHub repository: \url{https://github.com/Henry-Ash-Williams/amml-assessment}}. 
+In this report, we outline and evaluate our implementation of Convolutional Long-Term-Short-Term Memory (LSTM) models for image sequence modelling. We develop a model which learns both \emph{extrapolation} and \emph{interpolation} of images within a dataset based on MNIST with autoregressive transformations applied at each time step. We also perform a rigorous evaluation of this model, with both quantitative and qualitative analysis, and analyse its robustness to both noise and missing data.\footnote{The code for our models, training, generation of graphs, and results can be found at the following GitHub repository: \url{https://github.com/Henry-Ash-Williams/amml-assessment}}. 
 
 \section{Background}
 
@@ -45,7 +45,7 @@ One of the earliest approaches for sequence modelling using neural networks, kno
     \label{fig:rnn}
 \end{figure}
 
-However, these models often suffer from the problems of both exploding and vanishing gradients. The exploding gradient problem can be mitigated using gradient clipping, the latter however, poses a more pertinant challenge. One solution to this problem, known as an LSTM~\cite{hochreiter1997long}, replaces the recurrent connection with a memory cell, and enable the model to learn what should be remembered, and what should forgotten. The hidden and cell states, $h_t$ and $c_t$ respectively, given the current input, $x_t$, and previous hidden and cell states, are shown in Equation~\ref{eq:lstm}. 
+However, these models often suffer from the problems of exploding and vanishing gradients. The exploding gradient problem can be mitigated using gradient clipping, the latter however, poses a more pertinant challenge. One solution to this problem, known as an LSTM~\cite{hochreiter1997long}, replaces the recurrent connection with a memory cell, and enable the model to learn what should be remembered, and what should be forgotten. The hidden and cell states, $h_t$ and $c_t$ respectively, given the current input, $x_t$, and previous hidden and cell states, are shown in Equation~\ref{eq:lstm}. 
 
 \begin{figure}
     \centering
@@ -67,7 +67,7 @@ However, these models often suffer from the problems of both exploding and vanis
 
 Where $\odot$ refers to the elementwise product. These models can effectively model long range sequences accurately, however they are less effective with spatial information, as the inputs are in the form of a feature vector, which does not contain any spatial information. 
 
-It is for this reason that the Convolutional LSTM~\cite{shi2015convolutionallstmnetworkmachine} architecture was developed, which combine the effective spatial learning of Convolutional Neural Networks, with the sequential modelling capabilities of LSTMs (See Equation.~\ref{eq:convlstm}). These models allow models to learn spatial transformations applied to an image over the course of a sequence, and it is for this reason that we chose this architecure for our investigation.  
+It is for this reason that the Convolutional LSTM~\cite{shi2015convolutionallstmnetworkmachine} architecture was developed, which combine the effective spatial learning of Convolutional Neural Networks, with the sequential modelling capabilities of LSTMs. These models allow models to learn spatial transformations applied to an image over the course of a sequence, and it is for this reason that we chose this architecure for our investigation.  
 
 \begin{equation}
     \begin{aligned}
@@ -84,7 +84,7 @@ It is for this reason that the Convolutional LSTM~\cite{shi2015convolutionallstm
 
 \subsection{Data}\label{sec:data}
 
-In this investigation, we make use of two datasets, both deriving from the MNIST handwritten digit dataset. The first consists of 400 sequences, each containing a unique handwritten number 6, which we refer to as N6. The images were then randomly modified in an autoregressive manner, with rotation, translation, and intensity based transformations, and adding independent gaussian noise at each step, producing a sequence of 16 images, shown in Figure~\ref{subfig:n6-seq}. Images at the $4^\text{th}$ and $16^\text{th}$ positions of the sequence were then removed for use in the testing set. The second dataset, known as N3, is generated in a indentical manner but it contains the number 3, and only contains 100 sequences. This dataset is used to evaluate the performance of our model on out-of-sample data. Both sets represent their images as greyscale, 36$\times$36 pixel images. 
+In this investigation, we make use of two datasets, both deriving from the MNIST handwritten digit dataset. The first consists of 400 sequences, each containing a unique handwritten number 6, which we refer to as N6. The images were then randomly modified in an autoregressive manner, with rotation, translation, and intensity based transformations, and adding independent gaussian noise at each step, producing a sequence of 16 images, shown in Figure~\ref{subfig:n6-seq}. Images at the $4^\text{th}$ and $16^\text{th}$ positions of the sequence were then removed for use in the testing set. The second dataset, known as N3, is generated in a indentical manner but it contains the number 3 instead, and only contains 100 sequences. This dataset is used to evaluate the performance of our model on out-of-sample data. Both sets represent their images as greyscale, 36$\times$36 pixel images. 
 
 \begin{figure*}
     \centering
@@ -107,13 +107,13 @@ In this investigation, we make use of two datasets, both deriving from the MNIST
 \begin{figure}
     \centering
     \includegraphics[scale=0.4]{assets/change-mag.png}
-    \caption{PCA plot of the difference between each pair of images in a sequence across our N6 dataset.}
+    \caption{PCA plot of the pairwise difference between consequitive images across the N6 dataset.}
     \label{fig:change}
 \end{figure}
 
-We begin our pre-processing by firstly scaling the pixel intensities such that they lie in the range $[0, 1]$ for the sake of numerical stability during training. We then find any potential outliers within the N6 dataset for removal. We find potential outliers by taking the difference between consequtive images throughout the sequences found in the dataset. Then, by fitting a multivariate gaussian distribution to this information, and finding transformations which exceed three standard deviations of the mean, we find potentially anomolous transformations. We find 33 such transformations, representing approximately 1\% of our dataset, indicating they are likely anomolous as we would only expect approximately 0.3\% of transformations to exhibit such a change. Sequences containing these transformations were consequently removed.
+We begin our pre-processing by firstly scaling the pixel intensities such that they lie in the range $[0, 1]$ for the sake of numerical stability during training. We then find any potential outliers within the N6 dataset for removal. These are found by taking the difference between consequtive images throughout the sequences found in the dataset. Then, by fitting a multivariate gaussian distribution to this information, and finding values which exceed three standard deviations of the mean, we find potentially anomolous transformations. We find 33 such transformations, representing approximately 1\% of our dataset, indicating they are likely anomolous as we would only expect approximately 0.3\% of transformations to exhibit such a change. Sequences containing these transformations were consequently removed (Figure~\ref{fig:change}).
 
-Recall from Section~\ref{sec:data}, that at each step of the sequence, independent gaussian noise is added to the current image. In order to help the model better generalise, we denoise each of the target images in our training dataset, effectively teaching the model to ignore noise in its predictions, and focus on the spatial transformations applied to the image instead. Denoise was performed using the Non-Local Means Denoising Algorithm\cite{buades2005non} provided by the Open-CV python interface~\cite{opencv_library}. 
+Recall from Section~\ref{sec:data}, that at each step of the sequence, independent gaussian noise is added to the current image. In order to help the model better generalise, we denoise each of the target images in our training dataset, effectively teaching the model to ignore noise in its predictions, and focus on the spatial transformations applied to the image instead. This was performed using the Non-Local Means Denoising Algorithm\cite{buades2005non} provided by the Open-CV python interface~\cite{opencv_library}. 
 
 Finally, we also reduce the length of our sequences from 16 to 3, as this will enable the model to learn the future transformation given only the previous two. This also has the added effect of drastically reducing the time spent training our models. Subsequences which predict the $4^\text{th}$ and $16^\text{th}$ images comprise our test set, and sequences containing the test images as part of their inputs are removed alltogether. 
 
@@ -147,9 +147,9 @@ We also test our best model on an augmented test dataset consisting of different
 
 Throughout our experiment of 200 training runs, we found 30 runs overfitted the training dataset, and only predict empty images during testing. These runs were consequently removed, leaving us with 170 runs in total. Of these 170 runs, 40 were performed on the base dataset, 44 on the denoised dataset, 50 on the dataset with outliers removed, and 36 on the fully processed dataset. The average test loss on both the N3 and N6 datasets are shown in Figure~\ref{fig:loss}, note that outliers have been removed from the graph for the sake of readability. 
 
-Of each of these datasets, we found the dataset with outliers removed achieved the lowest median test loss over all runs however it also exhibits the greatest spread in this metric. The fully processed dataset however, had the lowest variance in test loss, while also having a high maximum. Interestingly, the best test loss seen across all trials of our experiment, was performed on the denoised dataset. However, on average, it doesn't seem to yield much of an improvement over our base dataset. This suggests that its performance may be an effect of the hyperparameters used, or the random weight initialisation. 
+Of each of these datasets, we found the dataset with outliers removed achieved the lowest median test loss over all runs. However it also exhibits the greatest spread in this metric. The fully processed dataset however, had the lowest variance in test loss. Interestingly, the best model seen across all trials, was trained on the denoised dataset. However, on average, it doesn't seem to yield much of an improvement over our base dataset. This suggests that its performance may be an effect of the hyperparameters used, or the random weight initialisation. 
 
-When looking at the images produced by this model (Figure~\ref{fig:quali}), we see that it captures the spatial transformations well across both datasets, however it sometimes struggles with the intensty of pixels. Furthermore, we also see that it struggles with predicting noise, especially when predicting images towards the end of a sequence, which is largely to be expected, as it was trained on the denoised dataset. 
+When looking at the images produced by this model (Figure~\ref{fig:quali}), we see that it captures the spatial transformations well across both datasets, however it sometimes struggles with accurately predicting the intensty of pixels. We also see that it struggles with predicting noise, especially when predicting images towards the end of a sequence, which is largely to be expected, as this model was trained on the denoised dataset. 
 
 \begin{figure*}
     \centering
@@ -163,7 +163,7 @@ When looking at the images produced by this model (Figure~\ref{fig:quali}), we s
         \caption{Predicted images in context, where a carat ($~\hat{}~$) above an image denotes it as being the output from our model} 
         \label{fig:in-context}
     \end{subfigure}
-    \caption{Images generated by our best performing model, including mean squared error between predictions, and ground truth~(\ref{fig:error}), and the predicted images in context~(\ref{fig:in-context}) }
+    \caption{Images generated by our best model, including MSE between predictions, and ground truth~(\ref{fig:error}), and the predictions in context~(\ref{fig:in-context}) }
     \label{fig:quali}
 \end{figure*}
 
@@ -180,11 +180,11 @@ Our best model used 4 LSTM layers, with 71 kernels, and the ReLU activation func
         Removed Outliers & 214 & ReLU & 4 & 42 & 0.0010676 & Adamax & 4.52e-6 & 5.41e-6 \\
         Fully Processed & 216 & ReLU & 4 & 41 & 0.004656 & Adam & 3.86e-6 & 5.57e-6 \\ \bottomrule
         \end{tabular}
-    \caption{The hyperparameters and the average mean-squared-error achieved by the best performing model trained on each dataset.}
+    \caption{The hyperparameters and average MSE achieved by the best performing model trained on each dataset.}
     \label{tab:results}
 \end{table*}
 
-Our investigation into our models robustness, the results of which are shown in Figure~\ref{fig:robust-results} suggest our model is robust to both poisson, and gaussian noise with an intensities of less than approximately 0.2. However, once the intensity exceeds this, it begins to drastically rise. The salt and pepper noise however, has a more significantly impact on its performance. This form is noise is generated by setting random pixels from the image, and randomly setting them to either black or white. The intensity parameter controls the probability of any given pixel in the image being set to noise. As we increase intensity, fewer pixels from the image remain, meaning that there is less information for the model to work with. Throughout each of the types of noise, the models performance on the N3 dataset is worse than the N6 dataset. This disparity also increases as we increase the intensity of noise, and is most apparent in the poisson noise test. The effects of missing regions within the image are shown in Figure~\ref{fig:missing-results}, and we again see a disparity between the N6, and N3 datasets. Interestingly, we also see that as more approximately half of the image is removed, the loss decreases below the loss achieved on the unaugmented dataset. This may be due to the model predicting a blank image when the size of the removed region exceeds 
+Our investigation into our models robustness, the results of which are shown in Figure~\ref{fig:robust-results} suggest our model is robust to both poisson, and gaussian noise with an intensities of less than approximately 0.2. However, upon exceeding this value, it begins to drastically rise. Salt and pepper noise has a more significantly impact on its performance. This form is noise is generated by setting random pixels from the image, and randomly setting them to either black or white. The intensity parameter controls the probability of any pixel being set to noise. As we increase intensity, fewer pixels from the image remain, meaning that there is less information for the model to work with, explaining this behavior. Throughout each of the types of noise, the models performance on the N3 dataset is worse than the N6 dataset. This disparity also increases as we increase the intensity of noise, and is most apparent in the poisson noise test. The effects of missing regions within the image are shown in Figure~\ref{fig:missing-results}, and we again see a disparity between the N6, and N3 datasets. Interestingly, we also see that as more approximately half of the image is removed, the loss decreases below the loss achieved on the unaugmented dataset. This may be due to the model predicting a blank image when the size of the removed region exceeds half of the full image. 
 
 
 \begin{figure*}
@@ -192,7 +192,7 @@ Our investigation into our models robustness, the results of which are shown in 
     \begin{subfigure}{0.4\textwidth}
         \centering
         \includegraphics[width=0.9\textwidth]{assets/noise-results.png}
-        \caption{The average test loss with regards to the intensity and kind of noise applied}
+        \caption{Average test loss, varying intensity and kind of noise applied}
         \label{fig:robust-results}
     \end{subfigure}\hfill
     \begin{subfigure}{0.4\textwidth}
@@ -209,7 +209,7 @@ Our investigation into our models robustness, the results of which are shown in 
 
 In this report, we have outlined our implementation of a Convolutional Long-Short-Term-Memory model for use in a image sequence modelling task, and the results we obtain from our experiments. We perform both quantitative, and qualitative analysis of the data we obtain, and evaluate how resiliant our model is to images with various types of noise at different intensities and varying amounts missing data in the test images. 
 
-Future work in this field could investigate how other models for spatial-temporal learning perform in comparison to our model, such as the models developed as part of the OpenSTL benchmark\cite{tan2023openstl,gao2022simvp,tan2022simvpv2,tan2023temporal}, in addition to Recurrent Inference Machines~\cite{putzky2017recurrentinferencemachinessolving}. In addition to this, the effect of other metrics, such as Peak Signal-to-Noise ratio, structural similarity index measure, and perceptual loss, as we only used mean squared error to evaluate our models performance. Furthermore, as LSTMs are designed for use in long term sequence modelling tasks, and we work with smaller sequences, other models such as RNNs could be investigated to see if the computational complexity of the model could be reduced.
+Future work in this field could investigate how other models for spatial-temporal learning perform in comparison to our model, such as the models developed as part of the OpenSTL benchmark\cite{tan2023openstl,gao2022simvp,tan2022simvpv2,tan2023temporal}, and Recurrent Inference Machines~\cite{putzky2017recurrentinferencemachinessolving}. In addition to this, the effect of other metrics, such as Peak Signal-to-Noise ratio, structural similarity index measure, and perceptual loss, as we only used mean squared error to evaluate our models performance. Furthermore, as LSTMs are designed for use in long term sequence modelling tasks, and we work with smaller sequences, other models such as RNNs could be investigated to see if the computational complexity of the model could be reduced.
 
 \printbibliography
 
